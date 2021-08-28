@@ -6,5 +6,6 @@ The area focused are to observe trend of cases, predicting future on using explo
 Checkout - https://rpubs.com/davetej/covid
 
 Data sources:
-https://covid.ourworldindata.org/data/owid-covid-data.csv
-https://api.covid19india.org/csv/latest/state_wise.csv
+-https://covid.ourworldindata.org/data/owid-covid-data.csv
+
+-https://api.covid19india.org/csv/latest/state_wise.csv
