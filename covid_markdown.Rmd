@@ -1,0 +1,192 @@
+---
+title: "COVID-19 Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: cerulean
+    orientation:  rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(rgdal)
+library(maptools)
+library(ggplot2)
+library(mapproj)
+
+
+if (!require(gpclib)) install.packages("gpclib", type="source")
+gpclibPermit()
+```
+
+```{r,include=FALSE}
+  df <- read.csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+
+df_two <- 
+  select(df,date,location,new_cases)
+
+india_df <- df_two[ which(df_two$location == 'India' & !is.na(df_two$new_cases)),]
+
+
+india_df$date <- as.Date(india_df$date)
+
+india_df$location <- as.factor(india_df$location)
+
+```
+
+
+
+Row {data-height=650}
+-------------------------------------
+   
+### Daily COIVD-19 Counts
+
+```{r ,echo=FALSE}
+plot <- ggplot(india_df,aes(x=date,y=new_cases))+
+  geom_col()+
+  geom_smooth(se = FALSE, method = 'loess',formula = y ~ x)+
+  geom_hline(yintercept = max(india_df$new_cases))+
+  annotate(geom="text",x=as.Date("2020-09-16"),
+           y=max(india_df$new_cases)+3000,label="Peak Count")+
+  theme(
+    axis.title = element_blank(),
+    plot.background = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major.y = element_line(color = "grey",linetype =3),
+  )+
+  scale_x_date(date_breaks= "months",
+               date_labels = "%b")
+
+ggplotly(plot) 
+ 
+```   
+    
+### Daily COVID-19 Death Counts
+
+```{r,echo=FALSE}
+ 
+ 
+
+confirmed_df <- select(df,location,date,new_deaths,new_deaths_smoothed)
+
+confirmed_df<-confirmed_df[which(confirmed_df$location=='India'& !is.na(confirmed_df$new_deaths)),]
+
+confirmed_df[which(confirmed_df$new_deaths>1500),]<-NA
+confirmed_df[which(confirmed_df$new_deaths<0),]<-NA
+
+
+confirmed_df$date<-as.Date(confirmed_df$date)
+
+confirmed_df$location <- as.factor(confirmed_df$location)
+
+confirmed_df<-confirmed_df[which(confirmed_df$location=='India'& !is.na(confirmed_df$new_deaths)),]
+
+plot_confirmed <- ggplot(confirmed_df,aes(x=date,y=new_deaths))+
+  geom_col(color='skyBlue')+
+  geom_smooth(se = FALSE, method = 'loess',formula = y ~ x,na.rm=TRUE)+
+  theme(
+    axis.title = element_blank(),
+    plot.background = element_blank(),
+    panel.background = element_blank(),
+    panel.grid.major.y = element_line(color = "grey",linetype =3),
+  )+
+  scale_x_date(date_breaks= "months",
+               date_labels = "%b")
+
+ggplotly(plot_confirmed)
+```
+
+Row {data-height=650}
+-------------------------------------
+
+### Total Vaccination Count
+
+```{r, echo=FALSE}
+
+vaccinated_df <- select(df,location,date,total_vaccinations,people_vaccinated,
+                       people_fully_vaccinated)
+vaccinated_df <-vaccinated_df[which(vaccinated_df$location=='India'),] 
+vaccinated_df <-vaccinated_df[which(!is.na(vaccinated_df$total_vaccinations)),] 
+vaccinated_df <-vaccinated_df[which(!is.na(vaccinated_df$people_vaccinated)),] 
+vaccinated_df <-vaccinated_df[which(!is.na(vaccinated_df$people_fully_vaccinated)),] 
+
+vaccinated_df$date <- as.Date(vaccinated_df$date)
+vaccinated_df$location <- as.factor(vaccinated_df$location)
+
+long_df <- gather(vaccinated_df,"vaccination_type","counts",people_vaccinated,
+       people_fully_vaccinated)
+
+long_df$`vaccination type`<-as.factor(long_df$vaccination_type)
+
+vacc_plot<- ggplot(long_df,aes(x=date,y=total_vaccinations,
+                               fill=vaccination_type))+
+  scale_x_date(date_breaks= "weeks")+
+  ylab(label = "Total Vaccinated")+
+  xlab(label = element_blank())+
+  geom_col()+
+  theme(legend.position = "bottom",axis.title = element_blank(),
+        plot.background = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.major.y = element_line(color = "grey",linetype =3))+
+  scale_fill_manual(values = c("green3","green4"),
+                    guide = guide_legend(title = element_blank(),
+                                         nrow = 1, label.position = "bottom",
+                                         keywidth = 2.5))+
+  scale_size_continuous(labels = c("At least 1 dose", "Fully)) vaccinated"))
+
+ggplotly(vacc_plot)%>%
+  layout(legend = list(orientation = "h", x = 0.25, y =-0.1))
+```
+
+
+### Daily COVID-19 states counts
+
+```{r, include=FALSE}
+
+df <- read.csv("https://api.covid19india.org/csv/latest/state_wise.csv")
+
+df <- select(df,Last_Updated_Time,State,Confirmed,Recovered,Deaths,Active)
+
+colnames(df)[1] <- 'Date'
+
+df[which(df$State == 'Total' | df$State == 'State Unassigned'),]<-NA
+  
+df <- na.omit(df) 
+
+df$Date<-dmy(str_sub(df$Date,start =1,end = 10))
+
+df$State<-as.factor(df$State)
+
+df <- arrange(df, df$State)
+
+df$id <- seq.int(nrow(df))
+
+#reading shape file
+states_shape = readOGR("F:/Project_covid_analysis/IND_adm", "IND_adm1")
+gpclibPermitStatus()
+
+#convert shape file to DF
+fortify_shape = fortify(states_shape, region = "ID_1")
+
+#merging shape and covid DF
+Merged_data = merge(fortify_shape, df, by="id", all.x=TRUE)
+```
+
+```{r, echo=FALSE}
+plot<-ggplot(Merged_data, aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = Confirmed,label2 = Active,label3=Recovered,
+                   label4=Date),
+               color = "white",show.legend = FALSE, size = 0.1) +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.title = element_blank())+
+  coord_map()
+
+ggplotly(plot)%>%
+  layout(hoverlabel=list(bgcolor="white"))
+
+
+```
