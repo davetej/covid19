@@ -1,0 +1,41 @@
+# /path/to/airflow/plugins/custom_security.py
+
+from airflow.www.security import AirflowSecurityManager
+from airflow.plugins_manager import AirflowPlugin
+from airflow.models import DagBag
+import logging
+
+class CustomAirflowSecurityManager(AirflowSecurityManager):
+
+    def can_access_dag(self, user, dag):
+        logging.info(f"Checking access for user {user.username} on DAG {dag.dag_id}")
+        user_roles = [role.name for role in user.roles]
+        dag_tags = {tag.name for tag in dag.tags}
+
+        # Define the role to tag mapping
+        role_tag_mapping = {
+            'team_a': 'team_a_tag',
+            'team_b': 'team_b_tag',
+            'bbm': 'bbm_tag'
+        }
+
+        for role, tag in role_tag_mapping.items():
+            if role in user_roles and tag in dag_tags:
+                return True
+
+        return False
+
+    def get_all_dags(self, user):
+        accessible_dags = set()
+        dagbag = DagBag()
+
+        for dag_id, dag in dagbag.dags.items():
+            if self.can_access_dag(user, dag):
+                accessible_dags.add(dag_id)
+
+        return accessible_dags
+
+# Plugin to inject the custom security manager
+class CustomSecurityPlugin(AirflowPlugin):
+    name = "custom_security_plugin"
+    security_manager_class = CustomAirflowSecurityManager
