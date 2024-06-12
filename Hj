@@ -1,0 +1,41 @@
+from airflow.plugins_manager import AirflowPlugin
+from airflow.www.security import AirflowSecurityManager
+from flask_appbuilder.security.decorators import has_access
+from flask import g
+from airflow.www.app import cached_app
+
+class CustomSecurityManager(AirflowSecurityManager):
+
+    def has_access(self, permission, view_name, role=None):
+        user = g.user
+        
+        # Check if user is authenticated
+        if user.is_anonymous:
+            return False
+
+        # Retrieve user roles
+        user_roles = [role.name for role in user.roles]
+
+        # Implement your custom logic to check for tags
+        # Assuming you have a function `get_user_tags` to get the tags for a user
+        user_tags = self.get_user_tags(user)
+
+        # Check if any user role matches the tags
+        if any(role in user_tags for role in user_roles):
+            return super().has_access(permission, view_name, role)
+        
+        return False
+
+    def get_user_tags(self, user):
+        # This function should return the tags for a user
+        # For demonstration purposes, let's assume it returns a list of tags
+        # Replace this with your actual logic to get user tags
+        return ['role_tag_1', 'role_tag_2']  # Example tags
+
+class CustomSecurityPlugin(AirflowPlugin):
+    name = "custom_security_plugin"
+    
+    def __init__(self):
+        app = cached_app(None)
+        security_manager = CustomSecurityManager(appbuilder=app.appbuilder)
+        app.appbuilder.sm = security_manager
