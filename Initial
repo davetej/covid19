@@ -1,0 +1,10 @@
+from airflow.plugins_manager import AirflowPlugin
+from airflow.www.app import cached_app
+
+class CustomSecurityPlugin(AirflowPlugin):
+    name = "custom_security_plugin"
+    
+    def __init__(self):
+        app = cached_app(None)
+        security_manager = CustomSecurityManager(appbuilder=app.appbuilder)
+        app.appbuilder.sm = security_manager
