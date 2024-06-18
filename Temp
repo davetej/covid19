@@ -1,0 +1,19 @@
+import os
+import sys
+from airflow.models import DagBag
+
+def check_dag_tag(tag):
+    dag_bag = DagBag()
+    for dag_id, dag in dag_bag.dags.items():
+        if tag in dag.tags:
+            print(f"Found DAG with tag '{tag}': {dag_id}")
+            return True
+    return False
+
+if __name__ == '__main__':
+    tag_to_check = 'A'
+    if not check_dag_tag(tag_to_check):
+        print(f"No DAG with tag '{tag_to_check}' found. Deployment aborted.")
+        sys.exit(1)
+    print(f"DAG with tag '{tag_to_check}' found. Proceeding with deployment.")
+    sys.exit(0)
