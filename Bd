@@ -1,0 +1,26 @@
+# validate_dags.py
+import sys
+from airflow.models import DagBag
+
+def check_dag_tag(dag_folder, tag):
+    dag_bag = DagBag(dag_folder)
+    for dag_id, dag in dag_bag.dags.items():
+        if tag in dag.tags:
+            print(f"Found DAG with tag '{tag}' in folder '{dag_folder}': {dag_id}")
+            return True
+    return False
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Usage: python validate_dags.py <dag_folder_path>")
+        sys.exit(1)
+    
+    dag_folder_path = sys.argv[1]
+    tag_to_check = 'A'
+    
+    if check_dag_tag(dag_folder_path, tag_to_check):
+        print(f"DAG with tag '{tag_to_check}' found in folder '{dag_folder_path}'.")
+        sys.exit(0)
+    else:
+        print(f"No DAG with tag '{tag_to_check}' found in folder '{dag_folder_path}'.")
+        sys.exit(1)
