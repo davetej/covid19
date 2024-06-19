@@ -1,0 +1,21 @@
+from airflow import settings
+from airflow.models import User, Role
+
+# Create a session
+session = settings.Session()
+
+# Get the "Public" role
+public_role = session.query(Role).filter(Role.name == 'Public').one_or_none()
+
+if public_role:
+    # Get users having only the "Public" role
+    public_users = session.query(User).filter(User.roles == [public_role]).all()
+
+    # Print the users
+    for user in public_users:
+        print(f"User ID: {user.id}, Username: {user.username}, Email: {user.email}")
+else:
+    print("Public role not found.")
+
+# Close the session
+session.close()
