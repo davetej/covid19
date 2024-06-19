@@ -1,0 +1,36 @@
+import os
+import unittest
+from airflow.models import DagBag
+
+class TestDagImport(unittest.TestCase):
+    def setUp(self):
+        # Define the path to the dags folder
+        self.dags_folder = os.path.join(os.getenv('AIRFLOW_HOME', '/usr/local/airflow'), 'dags')
+        self.dagbag = DagBag(dag_folder=self.dags_folder, include_examples=False)
+
+    def test_dag_imports(self):
+        # List to hold the names of DAGs that failed to import
+        failed_dags = []
+
+        # Loop through all DAGs in the dagbag
+        for dag_id, dag in self.dagbag.dags.items():
+            try:
+                # Accessing the DAG will force the import
+                self.assertIsNotNone(dag)
+            except Exception as e:
+                failed_dags.append((dag_id, str(e)))
+
+        # If there are any failed DAGs, fail the test and print the errors
+        if failed_dags:
+            failed_dag_list = "\n".join([f"DAG ID: {dag_id}, Error: {error}" for dag_id, error in failed_dags])
+            self.fail(f"The following DAGs failed to import:\n{failed_dag_list}")
+
+    def test_no_import_errors(self):
+        # Collect import errors from the DagBag
+        import_errors = self.dagbag.import_errors
+        if import_errors:
+            error_messages = "\n".join([f"File: {key}, Error: {value}" for key, value in import_errors.items()])
+            self.fail(f"Some DAGs have import errors:\n{error_messages}")
+
+if __name__ == '__main__':
+    unittest.main()
