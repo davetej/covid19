@@ -1,0 +1,28 @@
+from airflow import settings
+from airflow.utils.session import create_session
+from airflow.www.security import AirflowSecurityManager
+from airflow.www.app import create_app
+
+# Create a Flask app context
+app = create_app()
+app.app_context().push()
+
+# Access the Airflow security manager
+security_manager = app.appbuilder.sm
+
+# Get the "Public" role
+public_role = security_manager.find_role("Public")
+
+if public_role:
+    # Get all users
+    with create_session() as session:
+        users = session.query(security_manager.user_model).all()
+    
+    # Filter users having only the "Public" role
+    public_users = [user for user in users if user.roles == [public_role]]
+    
+    # Print the users
+    for user in public_users:
+        print(f"User ID: {user.id}, Username: {user.username}, Email: {user.email}")
+else:
+    print("Public role not found.")
