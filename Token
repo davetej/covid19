@@ -1,0 +1,38 @@
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
+# Replace the following with your MongoDB connection string
+MONGODB_URI = "mongodb://localhost:27017/"
+DATABASE_NAME = "your_database_name"
+COLLECTION_NAME = "your_collection_name"
+
+# Connect to the MongoDB client
+client = MongoClient(MONGODB_URI)
+
+# Access the database and collection
+db = client[DATABASE_NAME]
+collection = db[COLLECTION_NAME]
+
+def fetch_token_by_doc_id(doc_id):
+    # Convert the string ID to ObjectId
+    object_id = ObjectId(doc_id)
+    
+    # Fetch the document by its ID
+    document = collection.find_one({"_id": object_id})
+    
+    if document:
+        # Retrieve the token from the document
+        token = document.get("token")
+        return token
+    else:
+        print(f"No document found with ID: {doc_id}")
+        return None
+
+# Replace 'your_document_id' with the actual document ID
+doc_id = "your_document_id"
+token = fetch_token_by_doc_id(doc_id)
+
+if token:
+    print(f"Token: {token}")
+else:
+    print("Token not found.")
