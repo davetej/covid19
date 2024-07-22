@@ -1,0 +1,26 @@
+import json
+import sys
+
+# Sample JSON payload (replace this with your actual JSON payload)
+json_payload = {
+    "key": "value",
+    # ... other keys and values
+}
+
+# Convert JSON payload to string
+json_string = json.dumps(json_payload)
+
+# Calculate the size of the JSON string in bytes
+size_in_bytes = sys.getsizeof(json_string)
+
+# Convert bytes to megabytes (1 MB = 1,048,576 bytes)
+size_in_mb = size_in_bytes / (1024 * 1024)
+
+# Check if the size is greater than 16MB
+if size_in_mb > 16:
+    print("The JSON payload size is greater than 16MB")
+else:
+    print("The JSON payload size is within the 16MB limit")
+
+# Output the size for reference
+print(f"Size of JSON payload: {size_in_mb:.2f} MB")
