@@ -1,0 +1,61 @@
+import git
+import time
+import paramiko
+import os
+
+# Git repository credentials and paths
+GIT_REPO_PATH = '/path/to/your/local/repo'
+GIT_REPO_URL = 'https://username:password@github.com/your/repo.git'
+MAIN_BRANCH = 'main'
+
+# Remote server credentials and paths
+REMOTE_SERVER = 'remote.server.address'
+REMOTE_USER = 'remote_username'
+REMOTE_PASSWORD = 'remote_password'
+REMOTE_REPO_PATH = '/path/to/remote/repo'
+
+# Clone the repository if it does not exist
+if not os.path.exists(GIT_REPO_PATH):
+    repo = git.Repo.clone_from(GIT_REPO_URL, GIT_REPO_PATH)
+else:
+    repo = git.Repo(GIT_REPO_PATH)
+
+def push_to_remote():
+    # Initialize SSH client
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(REMOTE_SERVER, username=REMOTE_USER, password=REMOTE_PASSWORD)
+    
+    # Commands to execute on the remote server
+    commands = [
+        f'cd {REMOTE_REPO_PATH}',
+        'git pull'
+    ]
+
+    for command in commands:
+        stdin, stdout, stderr = ssh.exec_command(command)
+        print(stdout.read().decode())
+        print(stderr.read().decode())
+    
+    ssh.close()
+
+def monitor_commits():
+    while True:
+        # Fetch the latest commits from the remote repository
+        repo.remotes.origin.fetch()
+        # Check for new commits on the main branch
+        local_commit = repo.head.commit.hexsha
+        remote_commit = repo.remotes.origin.refs[MAIN_BRANCH].commit.hexsha
+
+        if local_commit != remote_commit:
+            print('New commit detected. Pulling changes and pushing to remote server...')
+            repo.remotes.origin.pull()
+            push_to_remote()
+        else:
+            print('No new commits. Checking again in 60 seconds.')
+
+        # Wait for 60 seconds before checking again
+        time.sleep(60)
+
+if __name__ == '__main__':
+    monitor_commits()
